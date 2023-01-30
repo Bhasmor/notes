@@ -1,6 +1,15 @@
 import "./App.css";
 import React from "react";
 import AddNote from "./Components/AddNote";
+import { v4 as uuidv4 } from "uuid";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
+import { db } from "./Components/DB";
 
 function App() {
   const [vis, setVis] = React.useState(false);
@@ -8,25 +17,55 @@ function App() {
   const [desc, setDesc] = React.useState();
   const [notes, setNotes] = React.useState([]);
 
-  const addNotes = () => {
+  const readQuery = async () => {
+    setNotes([]);
+    const querySnapshot = await getDocs(collection(db, "users"));
+    querySnapshot.forEach((doc) => {
+      setNotes((prevData) => [...prevData, doc.data()]);
+    });
+  };
+
+  React.useEffect(() => {
+    readQuery();
+
+    return () => {
+      readQuery();
+    };
+  }, []);
+
+  console.log();
+
+  const addNotes = async () => {
     if (noteName && desc) {
-      setNotes([
-        ...notes,
-        {
-          id: notes.length,
+      try {
+        const docRef = await addDoc(collection(db, "users"), {
+          id: uuidv4(),
           name: noteName,
           desc: desc,
-        },
-      ]);
+        });
+        console.log("Document written with ID: ", docRef.id);
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
       setNoteName("");
       setDesc("");
       setVis(false);
     }
+    readQuery();
   };
 
-  const delNote = (index) => {
-    setNotes(notes.filter((id, ind) => ind !== index));
-    console.log(notes);
+  const delNote = async (id) => {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    querySnapshot.forEach((docc) => {
+      if (docc.data().id === id) {
+        const den = async () => {
+          await deleteDoc(doc(db, "users", docc.id));
+        };
+        den();
+      }
+    });
+
+    readQuery();
   };
 
   const Note = () => {
@@ -36,7 +75,7 @@ function App() {
           <h2 className="border-b p-4 font-bold uppercase">{note.name}</h2>
           <p className="p-4">{note.desc}</p>
           <button
-            onClick={() => delNote(index)}
+            onClick={() => delNote(note.id)}
             className="absolute bottom-2 right-2 border p-2 rounded bg-red-600"
           >
             X
