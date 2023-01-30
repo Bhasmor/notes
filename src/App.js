@@ -2,6 +2,7 @@ import "./App.css";
 import React from "react";
 import AddNote from "./Components/AddNote";
 import { v4 as uuidv4 } from "uuid";
+import LogIn from "./Components/LogIn";
 import {
   addDoc,
   collection,
@@ -10,12 +11,16 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "./Components/DB";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 function App() {
   const [vis, setVis] = React.useState(false);
   const [noteName, setNoteName] = React.useState();
   const [desc, setDesc] = React.useState();
   const [notes, setNotes] = React.useState([]);
+  const [email, SetEmail] = React.useState();
+  const [password, setPassword] = React.useState();
+  const [loged, setLoged] = React.useState(false);
 
   const readQuery = async () => {
     setNotes([]);
@@ -33,7 +38,21 @@ function App() {
     };
   }, []);
 
-  console.log();
+  function login() {
+    const auth = getAuth();
+    createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        setLoged(true);
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // ..
+      });
+  }
 
   const addNotes = async () => {
     if (noteName && desc) {
@@ -53,6 +72,8 @@ function App() {
     }
     readQuery();
   };
+
+  console.log(email);
 
   const delNote = async (id) => {
     const querySnapshot = await getDocs(collection(db, "users"));
@@ -85,8 +106,8 @@ function App() {
     });
   };
 
-  return (
-    <div className="flex justify-center overflow-hidden">
+  const LogedScreen = () => {
+    return (
       <div>
         <div className="flex flex-col justify-center items-center">
           <h2 className="text-3xl font-bold mt-6">Take Notes</h2>
@@ -109,6 +130,22 @@ function App() {
           <Note />
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="flex justify-center overflow-hidden">
+      {loged ? (
+        <LogedScreen />
+      ) : (
+        <LogIn
+          SetEmail={SetEmail}
+          setPassword={setPassword}
+          email={email}
+          password={password}
+          login={login}
+        />
+      )}
     </div>
   );
 }
