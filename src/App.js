@@ -9,9 +9,16 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "./Components/DB";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 
 function App() {
   const [vis, setVis] = React.useState(false);
@@ -21,50 +28,70 @@ function App() {
   const [email, SetEmail] = React.useState();
   const [password, setPassword] = React.useState();
   const [loged, setLoged] = React.useState(false);
+  const [userCre, setUserCre] = React.useState();
+  const [search, setSearch] = React.useState();
 
   const readQuery = async () => {
     setNotes([]);
-    const querySnapshot = await getDocs(collection(db, "users"));
+    const userRef = collection(db, "users");
+    const q = query(userRef, where("user", "==", `${userCre.uid}`));
+    const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
       setNotes((prevData) => [...prevData, doc.data()]);
     });
   };
 
   React.useEffect(() => {
-    readQuery();
-
-    return () => {
+    if (userCre) {
       readQuery();
-    };
-  }, []);
+    }
+  }, [userCre]);
 
-  function login() {
+  function register() {
     const auth = getAuth();
     createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         // Signed in
         const user = userCredential.user;
+        setUserCre(user);
         setLoged(true);
         // ...
       })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
+        alert(`Error Code:${errorCode}-- Error:${errorMessage}`);
         // ..
+      });
+  }
+  function login() {
+    const auth = getAuth();
+    signInWithEmailAndPassword(auth, email, password)
+      .then(async (userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        await setUserCre(user);
+        await setLoged(true);
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        alert(`Error Code:${errorCode}-- Error:${errorMessage}`);
       });
   }
 
   const addNotes = async () => {
     if (noteName && desc) {
       try {
-        const docRef = await addDoc(collection(db, "users"), {
+        await addDoc(collection(db, "users"), {
+          user: userCre.uid,
           id: uuidv4(),
           name: noteName,
           desc: desc,
         });
-        console.log("Document written with ID: ", docRef.id);
       } catch (e) {
-        console.error("Error adding document: ", e);
+        alert(e);
       }
       setNoteName("");
       setDesc("");
@@ -73,7 +100,17 @@ function App() {
     readQuery();
   };
 
-  console.log(email);
+  function logOut() {
+    const auth = getAuth();
+    signOut(auth)
+      .then(() => {
+        setLoged(false);
+        setUserCre();
+      })
+      .catch((error) => {
+        alert(`Error:${error}`);
+      });
+  }
 
   const delNote = async (id) => {
     const querySnapshot = await getDocs(collection(db, "users"));
@@ -105,11 +142,34 @@ function App() {
       );
     });
   };
+  const SearchNote = () => {
+    const not = notes.filter((nots) => nots.name.includes(search));
+    return not.map((note, index) => {
+      return (
+        <div key={index} className="border rounded p-4 w-[400px] relative">
+          <h2 className="border-b p-4 font-bold uppercase">{note.name}</h2>
+          <p className="p-4">{note.desc}</p>
+          <button
+            onClick={() => delNote(note.id)}
+            className="absolute bottom-2 right-2 border p-2 rounded bg-red-600"
+          >
+            X
+          </button>
+        </div>
+      );
+    });
+  };
 
-  const LogedScreen = () => {
+  const logedScreen = () => {
     return (
       <div>
         <div className="flex flex-col justify-center items-center">
+          <button
+            onClick={() => logOut()}
+            className="p-4 absolute top-0 right-0 bg-red-500"
+          >
+            LogOut
+          </button>
           <h2 className="text-3xl font-bold mt-6">Take Notes</h2>
           <button
             onClick={() => setVis(!vis)}
@@ -125,9 +185,16 @@ function App() {
             desc={desc}
             addNotes={addNotes}
           />
+          <input
+            className="mt-4 p-4 w-72 rounded"
+            type={"text"}
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <div className="flex flex-wrap w-screen p-24 gap-12 justify-center">
-          <Note />
+          {search ? <SearchNote /> : <Note />}
         </div>
       </div>
     );
@@ -136,7 +203,7 @@ function App() {
   return (
     <div className="flex justify-center overflow-hidden">
       {loged ? (
-        <LogedScreen />
+        logedScreen()
       ) : (
         <LogIn
           SetEmail={SetEmail}
@@ -144,6 +211,7 @@ function App() {
           email={email}
           password={password}
           login={login}
+          register={register}
         />
       )}
     </div>

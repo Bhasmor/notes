@@ -1,9 +1,9 @@
 import React from "react";
 
-function LogIn({ email, login, password, SetEmail, setPassword }) {
+function LogIn({ email, login, register, password, SetEmail, setPassword }) {
   return (
     <div className="flex flex-col gap-4 justify-center items-center w-screen h-screen">
-      <h2 className="text-5xl">You need to be loged in</h2>
+      <h2 className="text-6xl mb-12">Notes</h2>
       <input
         className="p-4 rounded"
         type={"email"}
@@ -18,9 +18,20 @@ function LogIn({ email, login, password, SetEmail, setPassword }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <button onClick={() => login()} className="p-4 bg-green-500 rounded">
-        LogIn
-      </button>
+      <div className="flex gap-4">
+        <button
+          onClick={() => login()}
+          className="p-4 w-36 bg-green-500 rounded"
+        >
+          LogIn
+        </button>
+        <button
+          onClick={() => register()}
+          className="p-4 w-36 bg-green-500 rounded"
+        >
+          Register
+        </button>
+      </div>
     </div>
   );
 }
